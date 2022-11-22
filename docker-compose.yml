@@ -1,0 +1,15 @@
+version: '3.7'
+
+services:
+  sherlock-backend:
+    container_name: sherlock-backend
+    image: sherlock-backend:1.0.0
+    build:
+      context: ./web-server
+      dockerfile: ./Dockerfile
+    ports:
+      - '8080:8080'
+    logging:
+      options:
+        max-size: '10m'
+        max-file: '3'
