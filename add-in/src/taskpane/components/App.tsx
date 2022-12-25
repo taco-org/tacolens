@@ -174,6 +174,7 @@ async function getAllGraph(setGraphMeta: React.Dispatch<React.SetStateAction<Gra
         tacoPatterns: tacoPatterns,
         rowOffset: rowOffset,
         colOffset: colOffset,
+        type: "Dependents",
       });
     });
   } catch (error) {
@@ -193,6 +194,7 @@ async function getDependents(setGraphMeta: React.Dispatch<React.SetStateAction<G
         tacoPatterns: subGraph,
         rowOffset: rowOffset,
         colOffset: colOffset,
+        type: "Dependents",
       });
     });
   } catch (error) {
@@ -203,16 +205,16 @@ async function getDependents(setGraphMeta: React.Dispatch<React.SetStateAction<G
   }
 }
 
-/*
-async function getGraph(setGraphMeta: React.Dispatch<React.SetStateAction<GraphMeta>>) {
+async function getPrecedents(setGraphMeta: React.Dispatch<React.SetStateAction<GraphMeta>>) {
   try {
     await Excel.run(async (context) => {
-      const { formulas, rowOffset, colOffset } = await getFormulas(context);
-      const tacoPatterns = await TacoApi.getPatterns(formulas, "query");
+      const { address, rowOffset, colOffset } = await getSelectedRange(context);
+      const subGraph = await TacoApi.getSubGraph(address, "precedents");
       setGraphMeta({
-        tacoPatterns: tacoPatterns,
+        tacoPatterns: subGraph,
         rowOffset: rowOffset,
         colOffset: colOffset,
+        type: "Precedents",
       });
     });
   } catch (error) {
@@ -222,13 +224,13 @@ async function getGraph(setGraphMeta: React.Dispatch<React.SetStateAction<GraphM
     }
   }
 }
-*/
 
 export default function App({ title, isOfficeInitialized }: { title: string; isOfficeInitialized: boolean }) {
   const [graphMeta, setGraphMeta] = React.useState({
     tacoPatterns: null,
     rowOffset: 0,
     colOffset: 0,
+    type: "Dependents",
   });
   console.log(graphMeta);
   if (!isOfficeInitialized) {
@@ -244,7 +246,7 @@ export default function App({ title, isOfficeInitialized }: { title: string; isO
   return (
     <div className="ms-welcome">
       {/* eslint-disable-next-line no-undef */}
-      <Header logo={require("./../../../assets/taco-logo.png")} title={title} message="TACO SheetAnalyzer" />
+      <Header logo={require("./../../../assets/taco-logo.png")} title={title} message="TACOLens" />
       <p className="ms-font-l">Analyze the sheet first and press one of the buttons below!</p>
       <Stack tokens={{ childrenGap: 5 }}>
         <DefaultButton
@@ -274,6 +276,13 @@ export default function App({ title, isOfficeInitialized }: { title: string; isO
           onClick={() => getDependents(setGraphMeta)}
         >
           Find Dependents
+        </DefaultButton>
+        <DefaultButton
+          className="ms-welcome__action"
+          iconProps={{ iconName: "ChevronRight" }}
+          onClick={() => getPrecedents(setGraphMeta)}
+        >
+          Find Precedents
         </DefaultButton>
         <Graph graphMeta={graphMeta} scale={100} />
       </Stack>
