@@ -426,7 +426,6 @@ export default class Graph extends React.Component<GraphProps, GraphState> {
     ] as Array<cytoscape.Stylesheet>;
     return (
       <>
-        <p className="ms-font-m-plus">Response Time (ms): {responseTime}</p>
         <CytoscapeComponent
           elements={elements}
           style={{ width: "95%", height: "600px", left: "2.5%" }}

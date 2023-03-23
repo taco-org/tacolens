@@ -169,15 +169,6 @@ export default function App({ title, isOfficeInitialized }: { title: string; isO
     <div className="ms-welcome">
       {/* eslint-disable-next-line no-undef */}
       <p className="ms-font-m-plus">
-        Select the type of formula graphs: &nbsp;
-        <button onClick={() => getAllGraph(setGraphMeta)}>
-          TACO
-        </button>
-        <button onClick={() => getAllGraph(setGraphMeta)}>
-          NoComp
-        </button>
-      </p>
-
       <Stack tokens={{ childrenGap: 5 }}>
         <DefaultButton
           className="ms-welcome__action"
