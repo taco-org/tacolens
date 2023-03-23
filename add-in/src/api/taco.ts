@@ -40,24 +40,4 @@ export class TacoApi {
       }
     );
   }
-
-  /*
-  public static async getPatterns(formulae: unknown[][], type: String) {
-    const url = `${BASE_URL}/${TacoApi.PREFIX}/patterns`;
-    var content = {
-      formulae: formulae,
-      type: type,
-    };
-    return await Requests.post(
-      url,
-      {
-        // body: JSON.stringify({ formulae }),
-        body: JSON.stringify(content),
-      },
-      async (payload: { taco: TacoResponse }) => {
-        return payload.taco;
-      }
-    );
-  }
-  */
 }

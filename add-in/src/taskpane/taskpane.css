@@ -26,6 +26,7 @@
     display: flex;
     -webkit-flex-direction: column;
     flex-direction: column;
+     align-content: center;
     align-items: center;
  }
 

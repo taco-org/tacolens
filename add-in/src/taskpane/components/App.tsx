@@ -6,45 +6,11 @@ import { ColorMap } from "../../utils/colormap";
 import Header from "./Header";
 import Progress from "./Progress";
 import Graph, { GraphMeta } from "./Graph";
-import {
-  excelToNums,
-  numsToExcel,
-  getTACOPatterns,
-  getNodeColors,
-  appendToMapValue,
-  scaleWidth,
-} from "../../utils/graphUtils";
-import context = Office.context;
 
 const colormap = new ColorMap();
 
-async function clusterFormulae() {
-  try {
-    await Excel.run(async (context) => {
-      const range = context.workbook.getSelectedRange();
-      range.load({ formulas: true });
-      await context.sync();
-      const hashMtx = await FormulasApi.hashFormulae(range.formulas);
-      hashMtx.forEach((row, i) => {
-        row.forEach((hash, j) => {
-          if (hash != null) {
-            range.getCell(i, j).format.fill.color = colormap.add(hash);
-          } else {
-            range.getCell(i, j).format.fill.clear();
-          }
-        });
-      });
-    });
-  } catch (error) {
-    console.error(error);
-    if (error instanceof OfficeExtension.Error) {
-      console.log("Debug info: " + JSON.stringify(error.debugInfo));
-    }
-  }
-}
-
 async function getSelectedRange(context: Excel.RequestContext) {
-  let range = context.workbook.getSelectedRange();
+  let range = context.workbook.getSelectedRange().getUsedRange();
   range.load({ rowIndex: true, columnIndex: true, rowCount: true, columnCount: true, address: true });
   await context.sync();
   const address = range.address;
@@ -54,7 +20,7 @@ async function getSelectedRange(context: Excel.RequestContext) {
 }
 
 async function getFormulas(context: Excel.RequestContext) {
-  let range = context.workbook.getSelectedRange();
+  let range = context.workbook.getSelectedRange().getUsedRange();
   range.load({ formulas: true, cellCount: true, rowIndex: true, columnIndex: true });
   await context.sync();
   const analyzeFullSheet = range.cellCount < 2;
@@ -81,7 +47,6 @@ async function getAllFormulas(context: Excel.RequestContext) {
 
 async function getAllTacoPatterns() {
   try {
-    // eslint-disable-next-line no-undef
     await Excel.run(async (context) => {
       const { formulas, rowOffset, colOffset } = await getAllFormulas(context);
       const sheetPatterns = await TacoApi.buildDepGraph(formulas, "build");
@@ -102,62 +67,6 @@ async function getAllTacoPatterns() {
       }
     });
   } catch (error) {
-    // eslint-disable-next-line no-undef
-    console.error(error);
-    // eslint-disable-next-line no-undef
-    if (error instanceof OfficeExtension.Error) {
-      // eslint-disable-next-line no-undef
-      console.log("Debug info: " + JSON.stringify(error.debugInfo));
-    }
-  }
-}
-
-/*
-async function getTacoPatterns() {
-  try {
-    await Excel.run(async (context) => {
-      const { formulas, rowOffset, colOffset } = await getFormulas(context);
-      const tacoPatterns = await TacoApi.getPatterns(formulas, "query");
-
-      for (let [_sheetName, sheet] of Object.entries(tacoPatterns)) {
-        for (let [_edgeKey, edges] of Object.entries(sheet)) {
-          for (let edge of edges) {
-            const {
-              ref: { _row, _column, _lastColumn, _lastRow },
-            } = edge;
-            const patternType = edge.edgeMeta.patternType;
-            const targetRange = context.workbook.worksheets
-              .getActiveWorksheet()
-              .getRangeByIndexes(rowOffset + _row, colOffset + _column, _lastRow - _row + 1, _lastColumn - _column + 1);
-            targetRange.format.fill.color = colormap.add(patternType);
-          }
-        }
-      }
-    });
-  } catch (error) {
-    console.error(error);
-    if (error instanceof OfficeExtension.Error) {
-      console.log("Debug info: " + JSON.stringify(error.debugInfo));
-    }
-  }
-}
-*/
-
-async function resetBackgroundColor() {
-  try {
-    await Excel.run(async (context) => {
-      const range = context.workbook.getSelectedRange();
-      range.load({ cellCount: true, formulas: true });
-      await context.sync();
-      if (range.cellCount === 1) {
-        const fullRange = context.workbook.worksheets.getActiveWorksheet().getUsedRange();
-        await context.sync();
-        fullRange.format.fill.clear();
-      } else {
-        range.format.fill.clear();
-      }
-    });
-  } catch (error) {
     console.error(error);
     if (error instanceof OfficeExtension.Error) {
       console.log("Debug info: " + JSON.stringify(error.debugInfo));
@@ -168,13 +77,17 @@ async function resetBackgroundColor() {
 async function getAllGraph(setGraphMeta: React.Dispatch<React.SetStateAction<GraphMeta>>) {
   try {
     await Excel.run(async (context) => {
+      const startTime = new Date();
       const { formulas, rowOffset, colOffset } = await getAllFormulas(context);
       const tacoPatterns = await TacoApi.buildDepGraph(formulas, "build");
+      const endTime = new Date();
+      var responseTime = endTime.getTime() - startTime.getTime();
       setGraphMeta({
         tacoPatterns: tacoPatterns,
         rowOffset: rowOffset,
         colOffset: colOffset,
         type: "Dependents",
+        responseTime: responseTime,
       });
     });
   } catch (error) {
@@ -188,13 +101,17 @@ async function getAllGraph(setGraphMeta: React.Dispatch<React.SetStateAction<Gra
 async function getDependents(setGraphMeta: React.Dispatch<React.SetStateAction<GraphMeta>>) {
   try {
     await Excel.run(async (context) => {
+      const startTime = new Date();
       const { address, rowOffset, colOffset } = await getSelectedRange(context);
       const subGraph = await TacoApi.getSubGraph(address, "dependents");
+      const endTime = new Date();
+      var responseTime = endTime.getTime() - startTime.getTime();
       setGraphMeta({
         tacoPatterns: subGraph,
         rowOffset: rowOffset,
         colOffset: colOffset,
         type: "Dependents",
+        responseTime: responseTime,
       });
     });
   } catch (error) {
@@ -208,13 +125,17 @@ async function getDependents(setGraphMeta: React.Dispatch<React.SetStateAction<G
 async function getPrecedents(setGraphMeta: React.Dispatch<React.SetStateAction<GraphMeta>>) {
   try {
     await Excel.run(async (context) => {
+      const startTime = new Date();
       const { address, rowOffset, colOffset } = await getSelectedRange(context);
       const subGraph = await TacoApi.getSubGraph(address, "precedents");
+      const endTime = new Date();
+      var responseTime = endTime.getTime() - startTime.getTime();
       setGraphMeta({
         tacoPatterns: subGraph,
         rowOffset: rowOffset,
         colOffset: colOffset,
         type: "Precedents",
+        responseTime: responseTime,
       });
     });
   } catch (error) {
@@ -227,6 +148,7 @@ async function getPrecedents(setGraphMeta: React.Dispatch<React.SetStateAction<G
 
 export default function App({ title, isOfficeInitialized }: { title: string; isOfficeInitialized: boolean }) {
   const [graphMeta, setGraphMeta] = React.useState({
+    responseTime: 0,
     tacoPatterns: null,
     rowOffset: 0,
     colOffset: 0,
@@ -246,23 +168,17 @@ export default function App({ title, isOfficeInitialized }: { title: string; isO
   return (
     <div className="ms-welcome">
       {/* eslint-disable-next-line no-undef */}
-      <Header logo={require("./../../../assets/taco-logo.png")} title={title} message="TACOLens" />
-      <p className="ms-font-l">Analyze the sheet first and press one of the buttons below!</p>
+      <p className="ms-font-m-plus">
+        Select the type of formula graphs: &nbsp;
+        <button onClick={() => getAllGraph(setGraphMeta)}>
+          TACO
+        </button>
+        <button onClick={() => getAllGraph(setGraphMeta)}>
+          NoComp
+        </button>
+      </p>
+
       <Stack tokens={{ childrenGap: 5 }}>
-        <DefaultButton
-          className="ms-welcome__action"
-          iconProps={{ iconName: "ChevronRight" }}
-          onClick={getAllTacoPatterns}
-        >
-          Analyze the Entire Sheet
-        </DefaultButton>
-        <DefaultButton
-          className="ms-welcome__action"
-          iconProps={{ iconName: "ChevronRight" }}
-          onClick={resetBackgroundColor}
-        >
-          Reset Background Color
-        </DefaultButton>
         <DefaultButton
           className="ms-welcome__action"
           iconProps={{ iconName: "ChevronRight" }}
@@ -270,12 +186,26 @@ export default function App({ title, isOfficeInitialized }: { title: string; isO
         >
           Generate the Entire Graph
         </DefaultButton>
+          <DefaultButton
+              className="ms-welcome__action"
+              iconProps={{ iconName: "ChevronRight" }}
+              onClick={() => getDependents(setGraphMeta)}
+          >
+            Find Direct Dependents
+          </DefaultButton>
+            <DefaultButton
+                className="ms-welcome__action"
+                iconProps={{ iconName: "ChevronRight" }}
+                onClick={() => getDependents(setGraphMeta)}
+            >
+              Find Dependents
+            </DefaultButton>
         <DefaultButton
           className="ms-welcome__action"
           iconProps={{ iconName: "ChevronRight" }}
-          onClick={() => getDependents(setGraphMeta)}
+          onClick={() => getPrecedents(setGraphMeta)}
         >
-          Find Dependents
+          Find Direct Precedents
         </DefaultButton>
         <DefaultButton
           className="ms-welcome__action"

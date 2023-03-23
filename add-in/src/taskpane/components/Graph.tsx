@@ -7,9 +7,9 @@ import {
   getTACOPatterns,
   getNodeColors,
   appendToMapValue,
-  scaleWidth, numToCol,
+  scaleWidth,
+  numToCol,
 } from "../../utils/graphUtils";
-import { connected } from "process";
 
 export interface GraphProps {
   graphMeta: GraphMeta;
@@ -21,6 +21,7 @@ export interface GraphMeta {
   colOffset: number;
   rowOffset: number;
   type: String;
+  responseTime: number;
 }
 
 interface GraphState {
@@ -44,17 +45,6 @@ export default class Graph extends React.Component<GraphProps, GraphState> {
     this.setState(() => {
       return { scale: +scale };
     });
-  }
-
-  private toggleCondense() {
-    this.setState((prevState) => ({
-      condense: !prevState.condense,
-    }));
-  }
-  private toggleEdgeOverlap() {
-    this.setState((prevState) => ({
-      edgeOverlap: !prevState.edgeOverlap,
-    }));
   }
 
   private generateGraph() {
@@ -103,6 +93,17 @@ export default class Graph extends React.Component<GraphProps, GraphState> {
           let depRow = (depCoords.rowStart + depCoords.rowEnd) / 2;
           let depCol = (depCoords.colStart + depCoords.colEnd) / 2;
 
+          let [rowStartOffset, rowEndOffSet] = Object.entries(edge.edgeMeta.startOffset);
+          let [colStartOffset, colEndOffSet] = Object.entries(edge.edgeMeta.endOffset);
+          // @ts-ignore
+          [, rowStartOffset] = rowStartOffset;
+          // @ts-ignore
+          [, rowEndOffSet] = rowEndOffSet;
+          // @ts-ignore
+          [, colStartOffset] = colStartOffset;
+          // @ts-ignore
+          [, colEndOffSet] = colEndOffSet;
+
           if (!seenRanges.has(prec)) {
             seenRanges.set(prec, elements.length);
             appendToMapValue(rowsToRange, precRow, elements.length);
@@ -114,6 +115,15 @@ export default class Graph extends React.Component<GraphProps, GraphState> {
                 bgColor: colorMap.get(patternType),
                 w: scaleWidth(prec),
                 h: nodeHeight,
+                annotation: this.getAnnotation(
+                  precCoords,
+                  depCoords,
+                  rowStartOffset,
+                  rowEndOffSet,
+                  colStartOffset,
+                  colEndOffSet,
+                  patternType
+                ),
               },
               classes: patternType,
               position: {
@@ -133,6 +143,15 @@ export default class Graph extends React.Component<GraphProps, GraphState> {
                 bgColor: colorMap.get(patternType),
                 w: scaleWidth(dep),
                 h: nodeHeight,
+                annotation: this.getAnnotation(
+                  precCoords,
+                  depCoords,
+                  rowStartOffset,
+                  rowEndOffSet,
+                  colStartOffset,
+                  colEndOffSet,
+                  patternType
+                ),
               },
               classes: patternType,
               position: {
@@ -148,32 +167,7 @@ export default class Graph extends React.Component<GraphProps, GraphState> {
             appendToMapValue(horizontalEdges, precRow, [prec, dep]);
           }
 
-          let [rowStartOffset, rowEndOffSet] = Object.entries(edge.edgeMeta.startOffset);
-          let [colStartOffset, colEndOffSet] = Object.entries(edge.edgeMeta.endOffset);
-          // @ts-ignore
-          [, rowStartOffset] = rowStartOffset;
-          // @ts-ignore
-          [, rowEndOffSet] = rowEndOffSet;
-          // @ts-ignore
-          [, colStartOffset] = colStartOffset;
-          // @ts-ignore
-          [, colEndOffSet] = colEndOffSet;
           if (graphMeta.type == "Precedents") {
-            elements.push({
-              data: {
-                classes: patternType,
-                source: dep,
-                target: prec,
-                label: `${dep}<-${prec}`,
-                edgeColor: colorMap.get(patternType),
-                annotation: this.getAnnotation(
-                    precCoords, depCoords,
-                    rowStartOffset, rowEndOffSet,
-                    colStartOffset, colEndOffSet,
-                    patternType),
-              },
-            });
-          } else {
             elements.push({
               data: {
                 classes: patternType,
@@ -182,49 +176,94 @@ export default class Graph extends React.Component<GraphProps, GraphState> {
                 label: `${dep}->${prec}`,
                 edgeColor: colorMap.get(patternType),
                 annotation: this.getAnnotation(
-                    precCoords, depCoords,
-                    rowStartOffset, rowEndOffSet,
-                    colStartOffset, colEndOffSet,
-                    patternType),
+                  precCoords,
+                  depCoords,
+                  rowStartOffset,
+                  rowEndOffSet,
+                  colStartOffset,
+                  colEndOffSet,
+                  patternType
+                ),
+                text_y_margin: -10,
+              },
+            });
+          } else {
+            elements.push({
+              data: {
+                classes: patternType,
+                source: dep,
+                target: prec,
+                label: `${dep}<-${prec}`,
+                edgeColor: colorMap.get(patternType),
+                annotation: this.getAnnotation(
+                  precCoords,
+                  depCoords,
+                  rowStartOffset,
+                  rowEndOffSet,
+                  colStartOffset,
+                  colEndOffSet,
+                  patternType
+                ),
+                text_y_margin: -10,
               },
             });
           }
         }
       }
     }
-
+    let fontRatio = 24;
     // Prevent overlapping nodes and condenses graph
     if (this.state.condense) {
       const sortedRows = Array.from(rowsToRange.keys()).sort((a, b) => a - b);
       let freeSpace = 0;
+      let maxAnnoLength = 1;
       for (let row of sortedRows) {
         for (let elemIndex of rowsToRange.get(row)) {
           elements[elemIndex].position.y = freeSpace;
-        }
-        if (this.state.edgeOverlap && horizontalEdges.has(row) && rowsToRange.get(row).length > 2) {
-          for (let [prec, dep] of horizontalEdges.get(row)) {
-            freeSpace += 0.33;
-            elements[seenRanges.get(prec)].position.y = freeSpace;
-            elements[seenRanges.get(dep)].position.y = freeSpace;
+          let annoLength = elements[elemIndex].data.annotation.length;
+          if (annoLength >= maxAnnoLength) {
+            maxAnnoLength = annoLength;
           }
         }
+        if (this.state.edgeOverlap && horizontalEdges.has(row) && rowsToRange.get(row).length > 2) {
+          let count = 0;
+          for (let [prec, dep] of horizontalEdges.get(row)) {
+            if (count > 0) {
+              freeSpace += 1.0;
+              elements[seenRanges.get(prec)].position.y = freeSpace;
+              elements[seenRanges.get(dep)].position.y = freeSpace;
+            }
+            count += 1;
+          }
+        }
+        freeSpace += maxAnnoLength / fontRatio;
         freeSpace += 1;
       }
 
       const sortedCols = Array.from(colsToRange.keys()).sort((a, b) => a - b);
       freeSpace = 0;
+      maxAnnoLength = 1;
       for (let col of sortedCols) {
         for (let elemIndex of colsToRange.get(col)) {
           elements[elemIndex].position.x = freeSpace;
-        }
-        if (this.state.edgeOverlap && verticalEdges.has(col) && colsToRange.get(col).length > 2) {
-          for (let [prec, dep] of verticalEdges.get(col)) {
-            freeSpace += 0.33;
-            elements[seenRanges.get(prec)].position.x = freeSpace;
-            elements[seenRanges.get(dep)].position.x = freeSpace;
+          let annoLength = elements[elemIndex].data.annotation.length;
+          if (annoLength >= maxAnnoLength) {
+            maxAnnoLength = annoLength;
           }
         }
-        freeSpace += 2;
+        if (this.state.edgeOverlap && verticalEdges.has(col) && colsToRange.get(col).length > 2) {
+          let count = 0;
+          for (let [prec, dep] of verticalEdges.get(col)) {
+            if (count > 0) {
+              freeSpace += 1.0;
+              elements[seenRanges.get(prec)].position.x = freeSpace;
+              elements[seenRanges.get(dep)].position.x = freeSpace;
+            }
+            count += 1;
+          }
+        }
+        freeSpace += maxAnnoLength / fontRatio;
+        freeSpace += 1;
       }
     }
     return elements;
@@ -240,7 +279,7 @@ export default class Graph extends React.Component<GraphProps, GraphState> {
     patternType: string
   ) {
     if (!patternType) {
-      return "NoComp";
+      return "Single";
     }
 
     let precAnnot, depAnnot;
@@ -313,14 +352,15 @@ export default class Graph extends React.Component<GraphProps, GraphState> {
       }
     }
     let str = startOffSet + " " + endOffSet + " " + colStartOffSet + " " + colEndOffSet;
-    // return patternType;
     return `${precAnnot} <- ${depAnnot}`;
+    //return startOffSet + " " + endOffSet + " " + colStartOffSet + " " + colEndOffSet;
   }
 
   public render() {
     if (this.props.graphMeta.tacoPatterns == null) {
       return <></>;
     }
+    const responseTime = this.props.graphMeta.responseTime;
     const elements = this.generateGraph();
     for (let i = 0; i < elements.length; i++) {
       let position = elements[i].position;
@@ -341,9 +381,9 @@ export default class Graph extends React.Component<GraphProps, GraphState> {
           "target-arrow-color": "data(edgeColor)",
           label: "data(annotation)",
           "font-size": "11",
-          'text-rotation': "autorotate",
+          "text-rotation": "autorotate",
           //'text-margin-x': 28,
-          'text-margin-y': -8
+          "text-margin-y": "data(text_y_margin)",
         },
       },
       {
@@ -384,11 +424,9 @@ export default class Graph extends React.Component<GraphProps, GraphState> {
         },
       },
     ] as Array<cytoscape.Stylesheet>;
-    console.log("elements received: ", elements);
     return (
       <>
-        <button onClick={() => this.toggleCondense}>toggle condensed graph</button>
-        <button onClick={() => this.toggleEdgeOverlap}>toggle edge overlap prevention</button>
+        <p className="ms-font-m-plus">Response Time (ms): {responseTime}</p>
         <CytoscapeComponent
           elements={elements}
           style={{ width: "95%", height: "600px", left: "2.5%" }}
