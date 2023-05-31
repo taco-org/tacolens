@@ -24,8 +24,14 @@ public class TacoService {
 
   public static Ref fromStringtoRange(String cellStr) {
     String[] content = cellStr.split(":");
+
     String start = content[0];
-    String end = content[1];
+    String end;
+    if (content.length > 1) {
+      end = content[1];
+    } else {
+      end = content[0];
+    }
     StringBuilder startRowStr = new StringBuilder();
     StringBuilder endRowStr = new StringBuilder();
     StringBuilder startColStr = new StringBuilder();
