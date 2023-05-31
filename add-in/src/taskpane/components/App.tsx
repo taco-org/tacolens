@@ -1,15 +1,11 @@
 import { buildClassMap, DefaultButton, Stack } from "@fluentui/react";
 import * as React from "react";
-import { FormulasApi } from "../../api/formulas";
 import { TacoApi } from "../../api/taco";
-import { ColorMap } from "../../utils/colormap";
-import Header from "./Header";
 import Progress from "./Progress";
 import Graph, { GraphMeta } from "./Graph";
 
-const colormap = new ColorMap();
-
 async function getSelectedRange(context: Excel.RequestContext) {
+  // Only contain used range
   let range = context.workbook.getSelectedRange().getUsedRange();
   range.load({ rowIndex: true, columnIndex: true, rowCount: true, columnCount: true, address: true });
   await context.sync();
@@ -19,20 +15,12 @@ async function getSelectedRange(context: Excel.RequestContext) {
   return { address, rowOffset, colOffset };
 }
 
-async function getFormulas(context: Excel.RequestContext) {
-  let range = context.workbook.getSelectedRange().getUsedRange();
-  range.load({ formulas: true, cellCount: true, rowIndex: true, columnIndex: true });
-  await context.sync();
-  const analyzeFullSheet = range.cellCount < 2;
-  if (analyzeFullSheet) {
-    range = context.workbook.worksheets.getActiveWorksheet().getUsedRange();
-    range.load({ formulas: true, rowIndex: true, columnIndex: true });
-    await context.sync();
+async function setDependencyGraphType(type: String) {
+  try {
+    await TacoApi.setGraphType(type);
+  } catch (error) {
+    console.error(error);
   }
-  const rowOffset = range.rowIndex;
-  const colOffset = range.columnIndex;
-  const formulas = range.formulas;
-  return { formulas, rowOffset, colOffset };
 }
 
 async function getAllFormulas(context: Excel.RequestContext) {
@@ -45,34 +33,6 @@ async function getAllFormulas(context: Excel.RequestContext) {
   return { formulas, rowOffset, colOffset };
 }
 
-async function getAllTacoPatterns() {
-  try {
-    await Excel.run(async (context) => {
-      const { formulas, rowOffset, colOffset } = await getAllFormulas(context);
-      const sheetPatterns = await TacoApi.buildDepGraph(formulas, "build");
-
-      for (let [, sheet] of Object.entries(sheetPatterns)) {
-        for (let [, edges] of Object.entries(sheet)) {
-          for (let edge of edges) {
-            const {
-              ref: { _row, _column, _lastColumn, _lastRow },
-            } = edge;
-            const patternType = edge.edgeMeta.patternType;
-            const targetRange = context.workbook.worksheets
-              .getActiveWorksheet()
-              .getRangeByIndexes(rowOffset + _row, colOffset + _column, _lastRow - _row + 1, _lastColumn - _column + 1);
-            targetRange.format.fill.color = colormap.add(patternType);
-          }
-        }
-      }
-    });
-  } catch (error) {
-    console.error(error);
-    if (error instanceof OfficeExtension.Error) {
-      console.log("Debug info: " + JSON.stringify(error.debugInfo));
-    }
-  }
-}
 
 async function getAllGraph(setGraphMeta: React.Dispatch<React.SetStateAction<GraphMeta>>) {
   try {
@@ -81,7 +41,7 @@ async function getAllGraph(setGraphMeta: React.Dispatch<React.SetStateAction<Gra
       const { formulas, rowOffset, colOffset } = await getAllFormulas(context);
       const tacoPatterns = await TacoApi.buildDepGraph(formulas, "build");
       const endTime = new Date();
-      var responseTime = endTime.getTime() - startTime.getTime();
+      const responseTime = endTime.getTime() - startTime.getTime();
       setGraphMeta({
         tacoPatterns: tacoPatterns,
         rowOffset: rowOffset,
@@ -98,12 +58,12 @@ async function getAllGraph(setGraphMeta: React.Dispatch<React.SetStateAction<Gra
   }
 }
 
-async function getDependents(setGraphMeta: React.Dispatch<React.SetStateAction<GraphMeta>>) {
+async function getDependents(setGraphMeta: React.Dispatch<React.SetStateAction<GraphMeta>>, isDirect: String) {
   try {
     await Excel.run(async (context) => {
       const startTime = new Date();
       const { address, rowOffset, colOffset } = await getSelectedRange(context);
-      const subGraph = await TacoApi.getSubGraph(address, "dependents");
+      const subGraph = await TacoApi.getSubGraph(address, "dependents", isDirect);
       const endTime = new Date();
       var responseTime = endTime.getTime() - startTime.getTime();
       setGraphMeta({
@@ -122,12 +82,12 @@ async function getDependents(setGraphMeta: React.Dispatch<React.SetStateAction<G
   }
 }
 
-async function getPrecedents(setGraphMeta: React.Dispatch<React.SetStateAction<GraphMeta>>) {
+async function getPrecedents(setGraphMeta: React.Dispatch<React.SetStateAction<GraphMeta>>, isDirect: String) {
   try {
     await Excel.run(async (context) => {
       const startTime = new Date();
       const { address, rowOffset, colOffset } = await getSelectedRange(context);
-      const subGraph = await TacoApi.getSubGraph(address, "precedents");
+      const subGraph = await TacoApi.getSubGraph(address, "precedents", isDirect);
       const endTime = new Date();
       var responseTime = endTime.getTime() - startTime.getTime();
       setGraphMeta({
@@ -170,10 +130,10 @@ export default function App({ title, isOfficeInitialized }: { title: string; isO
       {/* eslint-disable-next-line no-undef */}
       <p className="ms-font-m-plus">
         Select the type of formula graphs: &nbsp;
-        <button onClick={() => getAllGraph(setGraphMeta)}>
+        <button onClick={() => setDependencyGraphType("TACO")}>
           TACO
         </button>
-        <button onClick={() => getAllGraph(setGraphMeta)}>
+        <button onClick={() => setDependencyGraphType("NoComp")}>
           NoComp
         </button>
       </p>
@@ -189,28 +149,28 @@ export default function App({ title, isOfficeInitialized }: { title: string; isO
           <DefaultButton
               className="ms-welcome__action"
               iconProps={{ iconName: "ChevronRight" }}
-              onClick={() => getDependents(setGraphMeta)}
+              onClick={() => getDependents(setGraphMeta, "true")}
           >
             Find Direct Dependents
           </DefaultButton>
             <DefaultButton
                 className="ms-welcome__action"
                 iconProps={{ iconName: "ChevronRight" }}
-                onClick={() => getDependents(setGraphMeta)}
+                onClick={() => getDependents(setGraphMeta, "false")}
             >
               Find Dependents
             </DefaultButton>
         <DefaultButton
           className="ms-welcome__action"
           iconProps={{ iconName: "ChevronRight" }}
-          onClick={() => getPrecedents(setGraphMeta)}
+          onClick={() => getPrecedents(setGraphMeta, "true")}
         >
           Find Direct Precedents
         </DefaultButton>
         <DefaultButton
           className="ms-welcome__action"
           iconProps={{ iconName: "ChevronRight" }}
-          onClick={() => getPrecedents(setGraphMeta)}
+          onClick={() => getPrecedents(setGraphMeta, "false")}
         >
           Find Precedents
         </DefaultButton>
