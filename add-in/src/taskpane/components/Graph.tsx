@@ -93,8 +93,8 @@ export default class Graph extends React.Component<GraphProps, GraphState> {
           let depRow = (depCoords.rowStart + depCoords.rowEnd) / 2;
           let depCol = (depCoords.colStart + depCoords.colEnd) / 2;
 
-          let [rowStartOffset, rowEndOffSet] = Object.entries(edge.edgeMeta.startOffset);
-          let [colStartOffset, colEndOffSet] = Object.entries(edge.edgeMeta.endOffset);
+          let [rowStartOffset, colStartOffset] = Object.entries(edge.edgeMeta.startOffset);
+          let [rowEndOffSet, colEndOffSet] = Object.entries(edge.edgeMeta.endOffset);
           // @ts-ignore
           [, rowStartOffset] = rowStartOffset;
           // @ts-ignore
@@ -171,8 +171,8 @@ export default class Graph extends React.Component<GraphProps, GraphState> {
             elements.push({
               data: {
                 classes: patternType,
-                source: dep,
-                target: prec,
+                source: prec,
+                target: dep,
                 label: `${dep}->${prec}`,
                 edgeColor: colorMap.get(patternType),
                 annotation: this.getAnnotation(
@@ -193,7 +193,7 @@ export default class Graph extends React.Component<GraphProps, GraphState> {
                 classes: patternType,
                 source: dep,
                 target: prec,
-                label: `${dep}<-${prec}`,
+                label: `${dep}->${prec}`,
                 edgeColor: colorMap.get(patternType),
                 annotation: this.getAnnotation(
                   precCoords,
@@ -284,6 +284,8 @@ export default class Graph extends React.Component<GraphProps, GraphState> {
 
     let precAnnot, depAnnot;
     let precRowStart, precRowEnd, precColStart, precColEnd;
+    let depRowStart, depRowEnd, depColStart, depColEnd;
+
     if (precCoords.length == 1) {
       let coord = precCoords[0];
       let c = excelToNums(coord);
@@ -302,24 +304,40 @@ export default class Graph extends React.Component<GraphProps, GraphState> {
       precColEnd = c[1];
     }
 
+    depRowStart = depCoords.rowStart;
+    depRowEnd = depCoords.rowEnd;
+    depColStart = depCoords.colStart;
+    depColEnd = depCoords.colEnd;
+
     let precIsCell = precColStart == precColEnd && precRowStart == precRowEnd;
-    let depIsCell = depCoords.colStart == depCoords.colEnd && depCoords.rowStart == depCoords.rowEnd;
+    let depIsCell = depColStart == depColEnd && depRowStart == depRowEnd;
+    let precIsMultiCol = precColStart != precColEnd;
+    let depIsMultiCol = depColStart != depColEnd;
     if (precIsCell) {
       precAnnot = `${numToCol(precColStart)}${precRowStart}`;
       if (depIsCell) {
         depAnnot = `${numToCol(depCoords.colStart)}${depCoords.rowStart}`;
       } else {
-        // TODO: what if deps have multiple columns
-        depAnnot = `${numToCol(depCoords.colStart)}i`;
-        depAnnot += ", i in [" + depCoords.rowStart + ": " + depCoords.rowEnd + "]";
+        if (depIsMultiCol) {
+          depAnnot = `j${depRowStart}`;
+          depAnnot += ", j in [" + numToCol(depColStart) + ": " + numToCol(depColEnd) + "]";
+        } else {
+          depAnnot = `${numToCol(depCoords.colStart)}i`;
+          depAnnot += ", i in [" + depCoords.rowStart + ": " + depCoords.rowEnd + "]";
+        }
       }
     } else {
       if (depIsCell) {
         precAnnot = `${numsToExcel(precRowStart, precColStart)}:${numsToExcel(precRowEnd, precColEnd)}`;
         depAnnot = `${numToCol(depCoords.colStart)}${depCoords.rowStart}`;
       } else {
-        depAnnot = `${numToCol(depCoords.colStart)}i`;
-        depAnnot += ", i in [" + depCoords.rowStart + ": " + depCoords.rowEnd + "]";
+        if (depIsMultiCol) {
+          depAnnot = `j${depRowStart}`;
+          depAnnot += ", j in [" + numToCol(depColStart) + ": " + numToCol(depColEnd) + "]";
+        } else {
+          depAnnot = `${numToCol(depCoords.colStart)}i`;
+          depAnnot += ", i in [" + depCoords.rowStart + ": " + depCoords.rowEnd + "]";
+        }
         if (patternType == "RR") {
           if (startOffSet > 0) {
             precAnnot = `${numToCol(precColStart)}i-${startOffSet}`;
@@ -354,6 +372,7 @@ export default class Graph extends React.Component<GraphProps, GraphState> {
     let str = startOffSet + " " + endOffSet + " " + colStartOffSet + " " + colEndOffSet;
     return `${precAnnot} <- ${depAnnot}`;
     //return startOffSet + " " + endOffSet + " " + colStartOffSet + " " + colEndOffSet;
+    //return depRowStart + " " + depColStart + " " + depRowEnd + " " + depColEnd;
   }
 
   public render() {

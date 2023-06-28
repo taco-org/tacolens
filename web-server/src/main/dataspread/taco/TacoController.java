@@ -24,6 +24,7 @@ import spark.RouteGroup;
 public class TacoController implements Controller {
 
   private SheetAnalyzer sheetAnalyzer = null;
+  private SheetAnalyzer noCompSheetAnalyzer = null;
   private String graphType = "taco";
   private static String defaultSheetName = "default-sheet-name";
 
@@ -41,7 +42,7 @@ public class TacoController implements Controller {
           this.graphType = body.get("graph").toString().toLowerCase();
           return new Gson().toJson(Map.of("data", new String[0]));
         } else {
-          if (type.contains("build")) {
+          if (type.contains("build") || type.contains("get")) {
             // For building graphs, content should be [][]string
             JsonElement formulae = body.get("formulae");
             if (formulae != null) {
@@ -51,12 +52,26 @@ public class TacoController implements Controller {
               PatternType[][] hMtx = TacoService.getPatterns(fMtx);
               Map<String, String[][]> spreadsheetContent = new HashMap<>();
               spreadsheetContent.put(defaultSheetName, fMtx);
-              if (this.graphType.contains("taco")) {
-                sheetAnalyzer = SheetAnalyzer.createSheetAnalyzer(spreadsheetContent);
-              } else {
-                sheetAnalyzer = SheetAnalyzer.createNoCompSheetAnalyzer(spreadsheetContent);
+              if (type.contains("build")) {
+                if (this.graphType.contains("taco")) {
+                  sheetAnalyzer = SheetAnalyzer.createSheetAnalyzer(spreadsheetContent);
+                } else {
+                  noCompSheetAnalyzer = SheetAnalyzer.createNoCompSheetAnalyzer(spreadsheetContent);
+                }
               }
-              return new Gson().toJson(Map.of("data", hMtx, "taco", sheetAnalyzer.getTACODepGraphs()));
+              if (this.graphType.contains("taco")) {
+                if (sheetAnalyzer != null) {
+                  return new Gson().toJson(Map.of("data", hMtx, "taco", sheetAnalyzer.getTACODepGraphs()));
+                } else {
+                  return new Gson().toJson(Map.of("data", new String[0]));
+                }
+              } else {
+                if (noCompSheetAnalyzer != null) {
+                  return new Gson().toJson(Map.of("data", hMtx, "taco", noCompSheetAnalyzer.getTACODepGraphs()));
+                } else {
+                  return new Gson().toJson(Map.of("data", new String[0]));
+                }
+              }
             } else {
               // Return empty json
               return new Gson().toJson(Map.of("data", new String[0]));
@@ -66,20 +81,26 @@ public class TacoController implements Controller {
             String range = body.get("range").toString();
             String isDirect = body.get("isDirect").toString().toLowerCase();
             range = TacoService.parseAddressString(range);
-            if (sheetAnalyzer != null) {
+            SheetAnalyzer targetSheetAnalyzer;
+            if (this.graphType.contains("taco")) {
+              targetSheetAnalyzer = sheetAnalyzer;
+            } else {
+              targetSheetAnalyzer = noCompSheetAnalyzer;
+            }
+            if (targetSheetAnalyzer != null) {
               Ref target = TacoService.fromStringtoRange(range);
               Map<Ref, List<RefWithMeta>> result;
               if (type.contains("dep")) {
                 if (isDirect.contains("true")) {
-                  result = sheetAnalyzer.getDependentsSubGraph(defaultSheetName, target, true);
+                  result = targetSheetAnalyzer.getDependentsSubGraph(defaultSheetName, target, true);
                 } else {
-                  result = sheetAnalyzer.getDependentsSubGraph(defaultSheetName, target, false);
+                  result = targetSheetAnalyzer.getDependentsSubGraph(defaultSheetName, target, false);
                 }
               } else {
                 if (isDirect.contains("true")) {
-                  result = sheetAnalyzer.getPrecedentsSubGraph(defaultSheetName, target, true);
+                  result = targetSheetAnalyzer.getPrecedentsSubGraph(defaultSheetName, target, true);
                 } else {
-                  result = sheetAnalyzer.getPrecedentsSubGraph(defaultSheetName, target, false);
+                  result = targetSheetAnalyzer.getPrecedentsSubGraph(defaultSheetName, target, false);
                 }
               }
               Map<String, Map<Ref, List<RefWithMeta>>> subgraph = new HashMap<>();
