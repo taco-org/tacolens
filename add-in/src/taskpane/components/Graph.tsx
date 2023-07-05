@@ -116,6 +116,7 @@ export default class Graph extends React.Component<GraphProps, GraphState> {
                 w: scaleWidth(prec),
                 h: nodeHeight,
                 annotation: this.getAnnotation(
+                    graphMeta.type,
                   precCoords,
                   depCoords,
                   rowStartOffset,
@@ -144,6 +145,7 @@ export default class Graph extends React.Component<GraphProps, GraphState> {
                 w: scaleWidth(dep),
                 h: nodeHeight,
                 annotation: this.getAnnotation(
+                    graphMeta.type,
                   precCoords,
                   depCoords,
                   rowStartOffset,
@@ -168,46 +170,51 @@ export default class Graph extends React.Component<GraphProps, GraphState> {
           }
 
           if (graphMeta.type == "Precedents") {
-            elements.push({
-              data: {
-                classes: patternType,
-                source: prec,
-                target: dep,
-                label: `${dep}->${prec}`,
-                edgeColor: colorMap.get(patternType),
-                annotation: this.getAnnotation(
-                  precCoords,
-                  depCoords,
-                  rowStartOffset,
-                  rowEndOffSet,
-                  colStartOffset,
-                  colEndOffSet,
-                  patternType
-                ),
-                text_y_margin: -10,
-              },
-            });
-          } else {
+            // Find_Precedent
             elements.push({
               data: {
                 classes: patternType,
                 source: dep,
                 target: prec,
-                label: `${dep}->${prec}`,
+                label: `${prec}->${dep}`,
                 edgeColor: colorMap.get(patternType),
                 annotation: this.getAnnotation(
-                  precCoords,
-                  depCoords,
-                  rowStartOffset,
-                  rowEndOffSet,
-                  colStartOffset,
-                  colEndOffSet,
-                  patternType
+                    graphMeta.type,
+                    precCoords,
+                    depCoords,
+                    rowStartOffset,
+                    rowEndOffSet,
+                    colStartOffset,
+                    colEndOffSet,
+                    patternType
+                ),
+                text_y_margin: -10,
+              },
+            });
+          } else {
+            // Find_Dependent
+            elements.push({
+              data: {
+                classes: patternType,
+                source: prec,
+                target: dep,
+                label: `${prec}->${dep}`,
+                edgeColor: colorMap.get(patternType),
+                annotation: this.getAnnotation(
+                    graphMeta.type,
+                    precCoords,
+                    depCoords,
+                    rowStartOffset,
+                    rowEndOffSet,
+                    colStartOffset,
+                    colEndOffSet,
+                    patternType
                 ),
                 text_y_margin: -10,
               },
             });
           }
+
         }
       }
     }
@@ -270,109 +277,165 @@ export default class Graph extends React.Component<GraphProps, GraphState> {
   }
 
   private getAnnotation(
-    precCoords: any,
-    depCoords: any,
-    startOffSet: any,
-    endOffSet: any,
-    colStartOffSet: any,
-    colEndOffSet: any,
-    patternType: string
+      graphType: any,
+      precCoords: any,
+      depCoords: any,
+      startOffSet: any,
+      endOffSet: any,
+      colStartOffSet: any,
+      colEndOffSet: any,
+      patternType: string
   ) {
     if (!patternType) {
       return "Single";
     }
 
     let precAnnot, depAnnot;
-    let precRowStart, precRowEnd, precColStart, precColEnd;
-    let depRowStart, depRowEnd, depColStart, depColEnd;
+    // Find_Dep: prec -> source, dep -> target
+    // Find_Prec: dep -> source, prec -> target
+    let sourceRowStart, sourceRowEnd, sourceColStart, sourceColEnd;
+    let targetRowStart, targetRowEnd, targetColStart, targetColEnd;
 
     if (precCoords.length == 1) {
       let coord = precCoords[0];
       let c = excelToNums(coord);
-      precRowStart = c[0];
-      precRowEnd = c[0];
-      precColStart = c[1];
-      precColEnd = c[1];
+      sourceRowStart = c[0];
+      sourceRowEnd = c[0];
+      sourceColStart = c[1];
+      sourceColEnd = c[1];
     } else {
       let coord = precCoords[0];
       let c = excelToNums(coord);
-      precRowStart = c[0];
-      precColStart = c[1];
+      sourceRowStart = c[0];
+      sourceColStart = c[1];
       coord = precCoords[1];
       c = excelToNums(coord);
-      precRowEnd = c[0];
-      precColEnd = c[1];
+      sourceRowEnd = c[0];
+      sourceColEnd = c[1];
     }
 
-    depRowStart = depCoords.rowStart;
-    depRowEnd = depCoords.rowEnd;
-    depColStart = depCoords.colStart;
-    depColEnd = depCoords.colEnd;
+    targetRowStart = depCoords.rowStart;
+    targetRowEnd = depCoords.rowEnd;
+    targetColStart = depCoords.colStart;
+    targetColEnd = depCoords.colEnd;
+
+    let precRowStart, precRowEnd, precColStart, precColEnd;
+    let depRowStart, depRowEnd, depColStart, depColEnd;
+
+    if (graphType == "Precedents") {
+      precRowStart = targetRowStart;
+      precRowEnd = targetRowEnd;
+      precColStart = targetColStart;
+      precColEnd = targetColEnd;
+      depRowStart = sourceRowStart;
+      depRowEnd = sourceRowEnd;
+      depColStart = sourceColStart;
+      depColEnd = sourceColEnd;
+    } else {
+      depRowStart = targetRowStart;
+      depRowEnd = targetRowEnd;
+      depColStart = targetColStart;
+      depColEnd = targetColEnd;
+      precRowStart = sourceRowStart;
+      precRowEnd = sourceRowEnd;
+      precColStart = sourceColStart;
+      precColEnd = sourceColEnd;
+    }
+
+    let str1 = precRowStart + " " + precRowEnd + " " + precColStart + " " + precColEnd;
+    let str2 = depRowStart + " " + depRowEnd + " " + depColStart + " " + depColEnd;
+    str1 = str1 + " " + str2;
 
     let precIsCell = precColStart == precColEnd && precRowStart == precRowEnd;
     let depIsCell = depColStart == depColEnd && depRowStart == depRowEnd;
-    let precIsMultiCol = precColStart != precColEnd;
     let depIsMultiCol = depColStart != depColEnd;
     if (precIsCell) {
       precAnnot = `${numToCol(precColStart)}${precRowStart}`;
       if (depIsCell) {
-        depAnnot = `${numToCol(depCoords.colStart)}${depCoords.rowStart}`;
+        depAnnot = `${numToCol(depColStart)}${depRowStart}`;
       } else {
         if (depIsMultiCol) {
           depAnnot = `j${depRowStart}`;
           depAnnot += ", j in [" + numToCol(depColStart) + ": " + numToCol(depColEnd) + "]";
         } else {
-          depAnnot = `${numToCol(depCoords.colStart)}i`;
-          depAnnot += ", i in [" + depCoords.rowStart + ": " + depCoords.rowEnd + "]";
+          depAnnot = `${numToCol(depColStart)}i`;
+          depAnnot += ", i in [" + depRowStart + ": " + depRowEnd + "]";
         }
       }
     } else {
       if (depIsCell) {
         precAnnot = `${numsToExcel(precRowStart, precColStart)}:${numsToExcel(precRowEnd, precColEnd)}`;
-        depAnnot = `${numToCol(depCoords.colStart)}${depCoords.rowStart}`;
+        depAnnot = `${numToCol(depColStart)}${depRowStart}`;
       } else {
         if (depIsMultiCol) {
           depAnnot = `j${depRowStart}`;
           depAnnot += ", j in [" + numToCol(depColStart) + ": " + numToCol(depColEnd) + "]";
+          if (patternType == "RR") {
+            if (colStartOffSet > 0) {
+              precAnnot = `(j-${colStartOffSet})${precRowStart}`;
+            } else if (startOffSet < 0) {
+              precAnnot = `(j+${colStartOffSet})${precRowStart}`;
+            } else {
+              precAnnot = `j${precRowStart}`;
+            }
+          } else if (patternType == "RF") {
+            if (startOffSet > 0) {
+              precAnnot = `(j-${colStartOffSet})${precRowStart}`;
+            } else if (startOffSet < 0) {
+              precAnnot = `(j+${colStartOffSet})${precRowStart}`;
+            } else {
+              precAnnot = `j${precRowStart}`;
+            }
+            precAnnot = `${precAnnot}:${numToCol(precColEnd)}${precRowEnd}`;
+          } else if (patternType == "FR") {
+            precAnnot = `${numToCol(precColStart)}${precRowStart}`;
+            if (colEndOffSet > 0) {
+              precAnnot = `${precAnnot}:(j-${colEndOffSet})${precRowStart}`;
+            } else if (colEndOffSet < 0) {
+              precAnnot = `${precAnnot}:(j+${colEndOffSet})${precRowStart}`;
+            } else {
+              precAnnot = `${precAnnot}:j${precRowStart}`;
+            }
+          } else {
+            precAnnot = `${numToCol(precColStart)}${precRowStart}:${numToCol(precColEnd)}${precRowEnd}`;
+          }
         } else {
-          depAnnot = `${numToCol(depCoords.colStart)}i`;
-          depAnnot += ", i in [" + depCoords.rowStart + ": " + depCoords.rowEnd + "]";
-        }
-        if (patternType == "RR") {
-          if (startOffSet > 0) {
-            precAnnot = `${numToCol(precColStart)}i-${startOffSet}`;
-          } else if (startOffSet < 0) {
-            precAnnot = `${numToCol(precColStart)}i+${startOffSet}`;
+          depAnnot = `${numToCol(depColStart)}i`;
+          depAnnot += ", i in [" + depRowStart + ": " + depRowEnd + "]";
+          if (patternType == "RR") {
+            if (startOffSet > 0) {
+              precAnnot = `${numToCol(precColStart)}i-${startOffSet}`;
+            } else if (startOffSet < 0) {
+              precAnnot = `${numToCol(precColStart)}i+${startOffSet}`;
+            } else {
+              precAnnot = `${numToCol(precColStart)}i`;
+            }
+          } else if (patternType == "RF") {
+            if (startOffSet > 0) {
+              precAnnot = `${numToCol(precColStart)}i-${startOffSet}`;
+            } else if (startOffSet < 0) {
+              precAnnot = `${numToCol(precColStart)}i+${startOffSet}`;
+            } else {
+              precAnnot = `${numToCol(precColStart)}i`;
+            }
+            precAnnot = `${precAnnot}:${numToCol(precColEnd)}${precRowEnd}`;
+          } else if (patternType == "FR") {
+            precAnnot = `${numToCol(precColStart)}${precRowStart}`;
+            if (endOffSet > 0) {
+              precAnnot = `${precAnnot}:${numToCol(precColEnd)}i-${endOffSet}`;
+            } else if (endOffSet < 0) {
+              precAnnot = `${precAnnot}:${numToCol(precColEnd)}i+${endOffSet}`;
+            } else {
+              precAnnot = `${precAnnot}:${numToCol(precColEnd)}i`;
+            }
           } else {
-            precAnnot = `${numToCol(precColStart)}i`;
+            precAnnot = `${numToCol(precColStart)}${precRowStart}:${numToCol(precColEnd)}${precRowEnd}`;
           }
-        } else if (patternType == "RF") {
-          if (startOffSet > 0) {
-            precAnnot = `${numToCol(precColStart)}i-${startOffSet}`;
-          } else if (startOffSet < 0) {
-            precAnnot = `${numToCol(precColStart)}i+${startOffSet}`;
-          } else {
-            precAnnot = `${numToCol(precColStart)}i`;
-          }
-          precAnnot = `${precAnnot}:${numToCol(precColEnd)}${precRowEnd}`;
-        } else if (patternType == "FR") {
-          precAnnot = `${numToCol(precColStart)}${precRowStart}`;
-          if (endOffSet > 0) {
-            precAnnot = `${precAnnot}:${numToCol(precColEnd)}i-${endOffSet}`;
-          } else if (startOffSet < 0) {
-            precAnnot = `${precAnnot}:${numToCol(precColEnd)}i+${endOffSet}`;
-          } else {
-            precAnnot = `${precAnnot}:${numToCol(precColEnd)}i`;
-          }
-        } else {
-          precAnnot = `${numToCol(precColStart)}${precRowStart}:${numToCol(precColEnd)}${precRowEnd}`;
         }
       }
     }
-    let str = startOffSet + " " + endOffSet + " " + colStartOffSet + " " + colEndOffSet;
-    return `${precAnnot} <- ${depAnnot}`;
-    //return startOffSet + " " + endOffSet + " " + colStartOffSet + " " + colEndOffSet;
-    //return depRowStart + " " + depColStart + " " + depRowEnd + " " + depColEnd;
+    //return str1;
+    return `${precAnnot} -> ${depAnnot}`;
   }
 
   public render() {
