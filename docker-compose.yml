@@ -1,14 +1,14 @@
 version: '3.7'
 
 services:
-  sherlock-backend:
-    container_name: sherlock-backend
-    image: sherlock-backend:1.0.0
+  tacolens-backend:
+    container_name: tacolens-backend
+    image: tacolens-backend:1.0.0
     build:
       context: ./web-server
       dockerfile: ./Dockerfile
     ports:
-      - '8080:8080'
+      - '4567:4567'
     logging:
       options:
         max-size: '10m'

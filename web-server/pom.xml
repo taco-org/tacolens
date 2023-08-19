@@ -105,6 +105,13 @@
       <scope>system</scope>
       <systemPath>${project.basedir}/lib/taco.jar</systemPath>
     </dependency>
+    <dependency>
+      <groupId>test</groupId>
+      <artifactId>test</artifactId>
+      <version>0.0.1</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/lib/webserver.jar</systemPath>
+    </dependency>
   </dependencies>
   <build>
     <sourceDirectory>${project.basedir}/src/main</sourceDirectory>
@@ -131,6 +138,9 @@
         <version>3.8.0</version>
         <configuration>
           <release>11</release>
+          <compilerArguments>
+            <extdirs>${project.basedir}/lib</extdirs>
+          </compilerArguments>
         </configuration>
       </plugin>
       <!-- Maven Shade Plugin -->

@@ -342,10 +342,6 @@ export default class Graph extends React.Component<GraphProps, GraphState> {
       precColEnd = sourceColEnd;
     }
 
-    let str1 = precRowStart + " " + precRowEnd + " " + precColStart + " " + precColEnd;
-    let str2 = depRowStart + " " + depRowEnd + " " + depColStart + " " + depColEnd;
-    str1 = str1 + " " + str2;
-
     let precIsCell = precColStart == precColEnd && precRowStart == precRowEnd;
     let depIsCell = depColStart == depColEnd && depRowStart == depRowEnd;
     let depIsMultiCol = depColStart != depColEnd;
@@ -434,7 +430,6 @@ export default class Graph extends React.Component<GraphProps, GraphState> {
         }
       }
     }
-    //return str1;
     return `${precAnnot} -> ${depAnnot}`;
   }
 
@@ -450,6 +445,15 @@ export default class Graph extends React.Component<GraphProps, GraphState> {
         elements[i].position.x = position.x * this.state.scale;
         elements[i].position.y = position.y * this.state.scale * 0.5;
       }
+    }
+    const elementlimit = 10000;
+    if (elements.length > elementlimit) {
+      return (
+          <>
+            <p className="ms-font-m-plus">Response Time (ms): {responseTime}, Number of elements: {elements.length}</p>
+            <p className="ms-font-m-plus">Too many elements, failed to render</p>
+          </>
+      );
     }
     const cytoscapeStylesheet = [
       {
@@ -508,10 +512,10 @@ export default class Graph extends React.Component<GraphProps, GraphState> {
     ] as Array<cytoscape.Stylesheet>;
     return (
       <>
-        <p className="ms-font-m-plus">Response Time (ms): {responseTime}</p>
+        <p className="ms-font-m-plus">Response Time (ms): {responseTime}, Number of elements: {elements.length}</p>
         <CytoscapeComponent
           elements={elements}
-          style={{ width: "95%", height: "600px", left: "2.5%" }}
+          style={{ width: "95%", height: "600px", left: "2.5%", borderStyle: "solid", borderWidth: "thin"}}
           stylesheet={cytoscapeStylesheet}
           pan={{ x: 0, y: 0 }}
           zoom={1}
