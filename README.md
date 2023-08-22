@@ -1,3 +1,8 @@
+# **Overview**
+TACO-Lens is an Excel plugin that helps Excel users easily explore and analyze spreadsheet formula graphs. It is supported by the TACO framework, which efficiently compresses, queries, and maintains formula graphs. In TACO-Lens, users can visually inpsect formula graphs in a compact representation and efficiently trace dependents or precedents given a selected spreadsheet range. 
+
+The TACO paper is published in ICDE'23 and can be found [here](https://people.eecs.berkeley.edu/~totemtang/paper/TACO-TR.pdf) and the TACO source code is [here](https://github.com/taco-org/taco).
+
 # **Getting Started**
 
 ## **Development Quick Start**
