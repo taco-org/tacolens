@@ -32,29 +32,6 @@
         </configuration>
       </plugin>
       <plugin>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <version>3.3.0</version>
-        <executions>
-          <execution>
-            <id>make-assembly</id>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <archive>
-            <manifest>
-              <mainClass>dataspread.App</mainClass>
-            </manifest>
-          </archive>
-          <descriptorRefs>
-            <descriptorRef>jar-with-dependencies</descriptorRef>
-          </descriptorRefs>
-        </configuration>
-      </plugin>
-      <plugin>
         <artifactId>maven-shade-plugin</artifactId>
         <version>2.4.3</version>
         <executions>
@@ -162,13 +139,6 @@
       <version>0.0.1</version>
       <scope>system</scope>
       <systemPath>${project.basedir}/lib/taco.jar</systemPath>
-    </dependency>
-    <dependency>
-      <groupId>test</groupId>
-      <artifactId>test</artifactId>
-      <version>0.0.1</version>
-      <scope>system</scope>
-      <systemPath>${project.basedir}/lib/web-server-1.0-SNAPSHOT.jar</systemPath>
     </dependency>
   </dependencies>
   <properties>

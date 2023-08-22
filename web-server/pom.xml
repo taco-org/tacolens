@@ -103,14 +103,7 @@
       <artifactId>taco-0.0.1</artifactId>
       <version>0.0.1</version>
       <scope>system</scope>
-      <systemPath>${project.basedir}/lib/taco.jar</systemPath>
-    </dependency>
-    <dependency>
-      <groupId>test</groupId>
-      <artifactId>test</artifactId>
-      <version>0.0.1</version>
-      <scope>system</scope>
-      <systemPath>${project.basedir}/lib/webserver.jar</systemPath>
+      <systemPath>${project.basedir}/taco_lib/taco.jar</systemPath>
     </dependency>
   </dependencies>
   <build>
