@@ -14,7 +14,7 @@ TACO-Lens is published in VLDB'23 as a [demo paper](https://people.eecs.berkeley
 
 ### **Start the Excel add-in:**
 
-1. Open a new terminal and navigate to the `add-in` folder.
+1. Open a new terminal and move to the `add-in` folder.
    ```sh
    cd add-in
    ```
