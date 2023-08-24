@@ -33,8 +33,8 @@ TACO-Lens is published in VLDB'23 as a [demo paper](https://people.eecs.berkeley
    npm run start
    ```
 
-4. A new Excel workbook should open automatically and you should be able to access the task plane for the add-in. 
+4. A new Excel workbook should open automatically and you should be able to use the add-in. 
 
-5. You can also use the add-in in your own Excel workbook.
+5. You can click the *TACO Add-in* icon to hide the add-in and open your own workbook to use thisadd-in.
 
-   ![demo](./img/demo.png)
+   ![demo](./img/demo-screenshot.png)
