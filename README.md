@@ -11,10 +11,6 @@ TACO-Lens is published in VLDB'23 as a [demo paper](https://people.eecs.berkeley
    ```sh
    docker-decompose up
    ```
-2. Stop the backend web server
-   ```sh
-   docker-decompose down
-   ```
 
 ### **Start the Excel add-in:**
 
