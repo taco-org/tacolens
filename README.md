@@ -29,10 +29,10 @@ TACO-Lens is published in VLDB'23 as a [demo paper](https://people.eecs.berkeley
    npm run start
    ```
 
-4. A new Excel workbook should open automatically along with the add-in. You can also use this add-in for your Excel workbook by opening one Excel file. To hide or open this add-in, you can click the **TACO Add-in** icon.
+4. A new Excel workbook should open automatically along with the add-in. Users can also use this add-in for their Excel workbooks by opening one Excel file. To hide or open this add-in, users can click the **TACO Add-in** icon.
 
 5. By clicking **Generate the Entire Graph**, the add-in will generate the formula graph for the current sheet using the representation of TACO. Users can zoom in/out and pan to explore different parts of the formula graph. 
 
-6. Users can also inspect the (direct) dependents/precedents of a spreadsheet range. To do this, please select the range on the worksheet and click the corresponding button in the add-in. Then, the corresponding dependents/precedents will be visualized in the add-in.
+6. Users can also inspect the (direct) dependents/precedents of a spreadsheet range. To do this, select the range on the worksheet and click the corresponding button in the add-in. Then, the corresponding dependents/precedents will be visualized in the add-in.
 
 ![demo](./img/demo-screenshot.png)
