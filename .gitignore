@@ -2,7 +2,7 @@
 # Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
 
 .DS_Store
-
+dependency-reduced-pom.xml
 node_modules/
 
 
